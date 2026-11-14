@@ -20,6 +20,7 @@ if __package__ in (None, ""):
 
 from salahbot.bot import COGS, SalahBot  # noqa: E402
 from salahbot.config import PROJECT_DIR, load_settings  # noqa: E402
+from salahbot.health import start_background  # noqa: E402
 from salahbot.prayer_times import METHODS  # noqa: E402
 
 BANNER = r"""
@@ -67,6 +68,12 @@ def _preflight() -> bool:
 async def _run() -> int:
     settings = load_settings()
     bot = SalahBot(settings)
+
+    # Start the health endpoint *before* logging in.  Hosts (Fly/Render/…)
+    # otherwise see a dead port while Discord rejects a bad token, report
+    # "deployment failed", and hide the real error from the logs.
+    bot.health = start_background()
+
     try:
         await bot.start(settings.token)
     except KeyboardInterrupt:

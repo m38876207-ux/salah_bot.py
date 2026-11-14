@@ -91,8 +91,20 @@ Pay-as-you-go. ماكينة `shared-cpu-1x / 256MB` شغالة 24/7 بتكلفة
 
 | الرسالة | الحل |
 |---|---|
-| `timeout trying to get your app` | مفيش `[http_service]` في `fly.toml` (اتأكد إن الملف مرفوع والديبلوي بياخده) |
+| `timeout trying to get your app` | اتأكد إن الديبلوي على كوميت فيه `fly.toml` الجديد (`GET /health`) |
 | `DISCORD_TOKEN` غير معرّف | `fly secrets set DISCORD_TOKEN=...` ثم `fly deploy` |
-| `Improper token has been passed` | التوكن قديم/باطل بعد الـ Reset → جدّده وحدّث الـ secret |
+| `Improper token has been passed` | ⚠️ **السبب الأشهر**: عملت Reset Token بس **ما حدّثتش** الـ secret في Fly. حدّثه وأعد النشر |
 | الماكينة بترجع تقف | `fly logs` وشوف الخطأ، وبعدين `fly scale count 1` |
 | الأوامر مش ظاهرة | حط `DISCORD_GUILD_ID` أو استنى ساعة (global commands) |
+| `/health` بيرجع timeout أو بيفشل | الماكينة مش شغالة خالص: `fly status` ثم `fly logs` |
+
+### أهم فحص بعد أي Reset للتوكن
+
+البوت بياخد التوكن من **Fly Secrets** مش من GitHub. أول ما تعمل Reset:
+التوكن القديم بيبقى باطل → البوت بيقع فورًا → `/health` بيفشل.
+
+```powershell
+fly secrets set DISCORD_TOKEN=التوكن-الجديد
+fly deploy
+fly logs
+```

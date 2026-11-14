@@ -49,9 +49,11 @@ class SalahBot(commands.Bot):
 
     # -- lifecycle -------------------------------------------------------- #
     async def setup_hook(self) -> None:
-        # Some hosts insist on an HTTP health check even for worker processes;
-        # start a tiny 200-OK endpoint when $PORT is provided.
-        self.health = start_background()
+        # Some hosts insist on an HTTP health check even for worker processes.
+        # The entry point already starts it before login, so only start it here
+        # when the bot is embedded in something else (tests, other launchers).
+        if self.health is None:
+            self.health = start_background()
 
         for extension in COGS:
             await self.load_extension(extension)
