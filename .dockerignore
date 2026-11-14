@@ -1,0 +1,12 @@
+# Files that should never be baked into the image.
+.git/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.env
+guild_settings.json
+docs/
+scripts/
+.pytest_cache/
+README.md
