@@ -1,0 +1,36 @@
+# Fly.io configuration for a Discord bot (worker, not a web service).
+#
+# The important part: there is NO [http_service] block. A Discord bot speaks
+# over an outbound WebSocket to Discord and never binds a port, so Fly must not
+# run an HTTP health check against it (that is what caused
+# "Checking https://...fly.dev ... timeout trying to get your app").
+#
+# Deploy:
+#   fly auth login
+#   fly apps create salah-bot-py          # or use an existing app
+#   fly secrets set DISCORD_TOKEN=...     # never commit the token
+#   fly deploy
+
+app = "salah-bot-py"
+primary_region = "cdg"  # Paris — closest stable Fly region to Egypt
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  LOG_LEVEL = "INFO"
+  # Uncomment and set your server id so slash commands sync instantly:
+  # DISCORD_GUILD_ID = "123456789012345678"
+
+# One always-on machine, no autostop: a bot that stops stops answering.
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
+
+[deploy]
+  strategy = "immediate"
+  min_machines_running = 1
+
+[[restart]]
+  policy = "always"
+  retries = 10
