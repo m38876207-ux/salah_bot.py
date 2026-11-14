@@ -12,6 +12,7 @@ from discord.ext import commands
 from .azkar import AzkarData
 from .cities import CITIES, City, default_city, resolve
 from .config import Settings, load_settings
+from .health import start_background
 from .prayer_times import DEFAULT_METHOD, METHODS, PrayerTimes, prayer_times_for
 from .services.aladhan import AlAdhanClient
 from .storage import SettingsStore
@@ -44,9 +45,14 @@ class SalahBot(commands.Bot):
         self.aladhan = AlAdhanClient()
         self.store = SettingsStore()
         self.started_at = datetime.now().astimezone()
+        self.health = None
 
     # -- lifecycle -------------------------------------------------------- #
     async def setup_hook(self) -> None:
+        # Some hosts insist on an HTTP health check even for worker processes;
+        # start a tiny 200-OK endpoint when $PORT is provided.
+        self.health = start_background()
+
         for extension in COGS:
             await self.load_extension(extension)
             log.info("loaded extension %s", extension)
@@ -76,6 +82,9 @@ class SalahBot(commands.Bot):
     async def close(self) -> None:
         try:
             await self.aladhan.close()
+            health = getattr(self, "health", None)
+            if health is not None:
+                await health.stop()
         finally:
             self.store.save()
             await super().close()

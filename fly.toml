@@ -1,15 +1,10 @@
-# Fly.io configuration for a Discord bot (worker, not a web service).
+# Fly.io configuration for a Discord bot.
 #
-# The important part: there is NO [http_service] block. A Discord bot speaks
-# over an outbound WebSocket to Discord and never binds a port, so Fly must not
-# run an HTTP health check against it (that is what caused
-# "Checking https://...fly.dev ... timeout trying to get your app").
-#
-# Deploy:
-#   fly auth login
-#   fly apps create salah-bot-py          # or use an existing app
-#   fly secrets set DISCORD_TOKEN=...     # never commit the token
-#   fly deploy
+# A Discord bot talks to Discord over an outbound WebSocket and does not need a
+# public HTTP port.  But Fly's deployer insists on checking an HTTP service if
+# one is defined (and it defines one by default), which times out and fails the
+# deploy.  So: expose the tiny health endpoint from salahbot/health.py on 8080
+# and let Fly check that instead — it answers 200 OK immediately.
 
 app = "salah-bot-py"
 primary_region = "cdg"  # Paris — closest stable Fly region to Egypt
@@ -18,19 +13,34 @@ primary_region = "cdg"  # Paris — closest stable Fly region to Egypt
   dockerfile = "Dockerfile"
 
 [env]
+  PORT = "8080"
   LOG_LEVEL = "INFO"
   # Uncomment and set your server id so slash commands sync instantly:
   # DISCORD_GUILD_ID = "123456789012345678"
 
-# One always-on machine, no autostop: a bot that stops stops answering.
+[http_service]
+  internal_port = 8080
+  force_https = false
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 10
+    hard_limit = 20
+
+  [[http_service.checks]]
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "30s"
+    method = "GET"
+    path = "/health"
+
 [[vm]]
   size = "shared-cpu-1x"
   memory = "256mb"
 
 [deploy]
   strategy = "immediate"
-  min_machines_running = 1
-
-[[restart]]
-  policy = "always"
-  retries = 10
